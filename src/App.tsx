@@ -286,6 +286,47 @@ const mockWalletData: Record<string, WalletData> = {
 
 function App() {
   const [activeTab, setActiveTab] = useState<'tradfi' | 'crypto'>('tradfi')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const stored = localStorage.getItem('tax-estimator-theme')
+    return (stored as 'light' | 'dark') || 'light'
+  })
+  
+  useEffect(() => {
+    document.body.className = theme
+  }, [])
+  
+  useEffect(() => {
+    localStorage.setItem('tax-estimator-theme', theme)
+    document.body.className = theme
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light')
+  }
+
+  const resetAllData = () => {
+    if (!confirm('Are you sure you want to clear all data? This cannot be undone.')) return
+    
+    localStorage.removeItem('tax-estimator-w2')
+    localStorage.removeItem('tax-estimator-1099')
+    localStorage.removeItem('tax-estimator-crypto')
+    localStorage.removeItem('tax-estimator-state')
+    
+    setW2Data({
+      wages: 0,
+      federalTax: 0,
+      stateTax: 0,
+      socialSecurity: 0,
+      medicare: 0
+    })
+    setForm1099({ income: 0, expenses: 0 })
+    setCryptoTxs([])
+    setSelectedState('CA')
+    setDocUpload({ file: null, progress: 0, status: 'idle' })
+    setCsvUpload({ file: null, progress: 0, status: 'idle' })
+    setWalletData(null)
+    setWalletError('')
+  }
   
   const [selectedState, setSelectedState] = useState<string>(() => {
     const stored = localStorage.getItem('tax-estimator-state')
@@ -373,11 +414,22 @@ function App() {
   const [cardExpiry, setCardExpiry] = useState('')
   const [cardCvc, setCardCvc] = useState('')
   const [cryptoWallet, setCryptoWallet] = useState<'connected' | 'disconnected'>('disconnected')
+  const [selectedCryptoToken, setSelectedCryptoToken] = useState<'ETH' | 'USDC' | 'SOL' | 'BTC' | 'BASE_ETH' | 'BASE_USDC'>('ETH')
+
+  const CRYPTO_PAYMENT_OPTIONS = {
+    ETH: { icon: '🔷', name: 'Ethereum', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f12eB4', amount: '~0.003 ETH', network: 'Ethereum' },
+    USDC: { icon: '◈', name: 'USD Coin', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f12eB4', amount: '$9.99 USDC', network: 'Ethereum' },
+    SOL: { icon: '☀️', name: 'Solana', address: 'DxVWLqDgFnU4QKe2X1hKvK5778893gJ4TzqyVAKH7uY', amount: '~0.07 SOL', network: 'Solana' },
+    BTC: { icon: '₿', name: 'Bitcoin', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', amount: '~0.0001 BTC', network: 'Bitcoin' },
+    BASE_ETH: { icon: '🔴', name: 'Base (ETH)', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f12eB4', amount: '~0.003 ETH', network: 'Base' },
+    BASE_USDC: { icon: '🔴', name: 'Base (USDC)', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f12eB4', amount: '$9.99 USDC', network: 'Base' },
+  } as const
 
   const handleExportClick = () => {
     setExportModal('checkout')
     setPaymentMethod('card')
     setCryptoWallet('disconnected')
+    setSelectedCryptoToken('ETH')
   }
 
   const handlePayment = async () => {
@@ -595,7 +647,37 @@ This is an estimate only. Consult a tax professional.
   return (
     <div className="app">
       <header>
-        <h1>Unified Tax Estimator</h1>
+        <div className="header-top">
+          <h1>Unified Tax Estimator</h1>
+          <div className="header-actions">
+            <button className="reset-btn" onClick={resetAllData} title="Clear All Data">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+              </svg>
+              Start Over
+            </button>
+            <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
+              {theme === 'light' ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/>
+                  <line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
         <p>TradFi + Crypto Tax Calculator</p>
         {saveIndicator && <span className="save-indicator">✓ Saved</span>}
       </header>
@@ -1160,18 +1242,28 @@ This is an estimate only. Consult a tax professional.
                 {paymentMethod === 'crypto' && (
                   <div className="crypto-payment">
                     <div className="crypto-options">
-                      <div className="crypto-token selected">
-                        <span className="token-icon">🔷</span>
-                        <span className="token-name">ETH</span>
-                        <span className="token-amount">~0.003 ETH</span>
-                      </div>
-                      <div className="crypto-token">
-                        <span className="token-icon">◈</span>
-                        <span className="token-name">USDC</span>
-                        <span className="token-amount">$9.99</span>
-                      </div>
+                      {(Object.keys(CRYPTO_PAYMENT_OPTIONS) as Array<keyof typeof CRYPTO_PAYMENT_OPTIONS>).map((token) => (
+                        <div 
+                          key={token}
+                          className={`crypto-token ${selectedCryptoToken === token ? 'selected' : ''}`}
+                          onClick={() => setSelectedCryptoToken(token)}
+                        >
+                          <span className="token-icon">{CRYPTO_PAYMENT_OPTIONS[token].icon}</span>
+                          <span className="token-name">{CRYPTO_PAYMENT_OPTIONS[token].name}</span>
+                          <span className="token-amount">{CRYPTO_PAYMENT_OPTIONS[token].amount}</span>
+                        </div>
+                      ))}
                     </div>
                     
+                    <div className="network-badge">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                      {CRYPTO_PAYMENT_OPTIONS[selectedCryptoToken].network} Network
+                    </div>
+
                     <div className="qr-placeholder">
                       <div className="qr-code">
                         <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
@@ -1192,10 +1284,10 @@ This is an estimate only. Consult a tax professional.
                     </div>
 
                     <div className="wallet-address">
-                      <label>Or send to this address:</label>
+                      <label>Send {CRYPTO_PAYMENT_OPTIONS[selectedCryptoToken].amount.split(' ')[1] || CRYPTO_PAYMENT_OPTIONS[selectedCryptoToken].name} to:</label>
                       <div className="address-box">
-                        <code>0x742d35Cc6634C0532925a3b844Bc9e7595f12eB4</code>
-                        <button className="copy-btn" onClick={() => navigator.clipboard.writeText('0x742d35Cc6634C0532925a3b844Bc9e7595f12eB4')}>
+                        <code>{CRYPTO_PAYMENT_OPTIONS[selectedCryptoToken].address}</code>
+                        <button className="copy-btn" onClick={() => navigator.clipboard.writeText(CRYPTO_PAYMENT_OPTIONS[selectedCryptoToken].address)}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
