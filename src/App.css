@@ -280,6 +280,14 @@ main {
   color: #27ae60;
 }
 
+.summary-row.overtime {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin: 0.25rem 0;
+}
+
 .summary hr {
   border: none;
   border-top: 1px solid #eee;
@@ -1410,6 +1418,11 @@ body.dark .summary h2 {
 
 body.dark .summary-row {
   color: #8b949e;
+}
+
+body.dark .summary-row.overtime {
+  background: rgba(39, 174, 96, 0.15);
+  color: #3fb950;
 }
 
 body.dark .summary hr {

@@ -7,6 +7,7 @@ interface W2Data {
   stateTax: number
   socialSecurity: number
   medicare: number
+  overtimePay: number
 }
 
 interface Form1099Data {
@@ -317,7 +318,8 @@ function App() {
       federalTax: 0,
       stateTax: 0,
       socialSecurity: 0,
-      medicare: 0
+      medicare: 0,
+      overtimePay: 0
     })
     setForm1099({ income: 0, expenses: 0 })
     setCryptoTxs([])
@@ -341,7 +343,8 @@ function App() {
       federalTax: 0,
       stateTax: 0,
       socialSecurity: 0,
-      medicare: 0
+      medicare: 0,
+      overtimePay: 0
     }
   })
 
@@ -516,7 +519,8 @@ This is an estimate only. Consult a tax professional.
       federalTax: 22000,
       stateTax: 8500,
       socialSecurity: 7750,
-      medicare: 1813
+      medicare: 1813,
+      overtimePay: 2500
     })
   }
 
@@ -628,6 +632,7 @@ This is an estimate only. Consult a tax professional.
   }, [cryptoTxs])
   
   const calculations = useMemo(() => {
+    const taxableW2Federal = Math.max(0, w2Data.wages - w2Data.overtimePay)
     const taxableW2 = w2Data.wages
     const net1099 = Math.max(0, form1099.income - form1099.expenses)
     const net1099Taxable = net1099 * 0.9235
@@ -638,9 +643,10 @@ This is an estimate only. Consult a tax professional.
     const totalLongTermGain = Math.max(0, longTermGains)
     const netCrypto = totalShortTermGain + totalLongTermGain
     
+    const federalTaxableIncome = taxableW2Federal + net1099Taxable + netCrypto
     const totalTaxableIncome = taxableW2 + net1099Taxable + netCrypto
     
-    const federalTax = calculateTax(totalTaxableIncome, FEDERAL_BRACKETS)
+    const federalTax = calculateTax(federalTaxableIncome, FEDERAL_BRACKETS)
     const selfEmploymentTax = net1099 * 0.9235 * 0.153
     
     const longTermCapitalGainsTax = calculateTax(totalLongTermGain, LONG_TERM_BRACKETS)
@@ -656,6 +662,7 @@ This is an estimate only. Consult a tax professional.
     
     return {
       totalTaxableIncome,
+      federalTaxableIncome,
       federalTax,
       selfEmploymentTax,
       stateTax,
@@ -665,7 +672,8 @@ This is an estimate only. Consult a tax professional.
       balanceDue,
       shortTermGains: totalShortTermGain,
       longTermGains: totalLongTermGain,
-      netCrypto
+      netCrypto,
+      overtimePay: w2Data.overtimePay
     }
   }, [w2Data, form1099, cryptoTaxData, selectedState, stateTaxInfo])
 
@@ -798,6 +806,16 @@ This is an estimate only. Consult a tax professional.
                   onChange={(e) => setW2Data({...w2Data, wages: Number(e.target.value)})}
                   placeholder="0.00"
                 />
+              </div>
+              <div className="form-group">
+                <label>Overtime Pay (Federal Tax-Free)</label>
+                <input
+                  type="number"
+                  value={w2Data.overtimePay || ''}
+                  onChange={(e) => setW2Data({...w2Data, overtimePay: Number(e.target.value)})}
+                  placeholder="0.00"
+                />
+                <p className="helper">Exempt from federal tax under certain conditions</p>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -1163,6 +1181,12 @@ This is an estimate only. Consult a tax professional.
             <span>Taxable Income</span>
             <span>${calculations.totalTaxableIncome.toLocaleString()}</span>
           </div>
+          {calculations.overtimePay > 0 && (
+            <div className="summary-row overtime">
+              <span>Tax-Free Overtime</span>
+              <span>-${calculations.overtimePay.toLocaleString()}</span>
+            </div>
+          )}
           <div className="summary-row">
             <span>Federal Tax</span>
             <span>${calculations.federalTax.toLocaleString()}</span>
