@@ -322,7 +322,8 @@ function App() {
     setForm1099({ income: 0, expenses: 0 })
     setCryptoTxs([])
     setSelectedState('CA')
-    setDocUpload({ file: null, progress: 0, status: 'idle' })
+    setW2Upload({ file: null, progress: 0, status: 'idle' })
+    setForm1099Upload({ file: null, progress: 0, status: 'idle' })
     setCsvUpload({ file: null, progress: 0, status: 'idle' })
     setWalletData(null)
     setWalletError('')
@@ -396,7 +397,13 @@ function App() {
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [walletError, setWalletError] = useState('')
 
-  const [docUpload, setDocUpload] = useState<{ file: File | null; progress: number; status: 'idle' | 'uploading' | 'done' | 'error' }>({
+  const [w2Upload, setW2Upload] = useState<{ file: File | null; progress: number; status: 'idle' | 'uploading' | 'done' | 'error' }>({
+    file: null,
+    progress: 0,
+    status: 'idle'
+  })
+
+  const [form1099Upload, setForm1099Upload] = useState<{ file: File | null; progress: number; status: 'idle' | 'uploading' | 'done' | 'error' }>({
     file: null,
     progress: 0,
     status: 'idle'
@@ -486,14 +493,14 @@ This is an estimate only. Consult a tax professional.
     setCardCvc('')
   }
 
-  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleW2Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setDocUpload({ file, progress: 0, status: 'uploading' })
+    setW2Upload({ file, progress: 0, status: 'uploading' })
 
     const interval = setInterval(() => {
-      setDocUpload(prev => {
+      setW2Upload(prev => {
         if (prev.progress >= 100) {
           clearInterval(interval)
           return { ...prev, progress: 100, status: 'done' }
@@ -511,6 +518,26 @@ This is an estimate only. Consult a tax professional.
       socialSecurity: 7750,
       medicare: 1813
     })
+  }
+
+  const handle1099Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setForm1099Upload({ file, progress: 0, status: 'uploading' })
+
+    const interval = setInterval(() => {
+      setForm1099Upload(prev => {
+        if (prev.progress >= 100) {
+          clearInterval(interval)
+          return { ...prev, progress: 100, status: 'done' }
+        }
+        return { ...prev, progress: prev.progress + Math.random() * 20 }
+      })
+    }, 200)
+
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
     setForm1099({
       income: 35000,
       expenses: 8500
@@ -544,7 +571,8 @@ This is an estimate only. Consult a tax professional.
     ])
   }
 
-  const clearDocUpload = () => setDocUpload({ file: null, progress: 0, status: 'idle' })
+  const clearW2Upload = () => setW2Upload({ file: null, progress: 0, status: 'idle' })
+  const clearForm1099Upload = () => setForm1099Upload({ file: null, progress: 0, status: 'idle' })
   const clearCsvUpload = () => setCsvUpload({ file: null, progress: 0, status: 'idle' })
 
   const fetchWalletData = async (address: string) => {
@@ -648,35 +676,33 @@ This is an estimate only. Consult a tax professional.
     <div className="app">
       <header>
         <div className="header-top">
+          <button className="reset-btn" onClick={resetAllData} title="Clear All Data">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+            </svg>
+            Start Over
+          </button>
           <h1>Unified Tax Estimator</h1>
-          <div className="header-actions">
-            <button className="reset-btn" onClick={resetAllData} title="Clear All Data">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="1 4 1 10 7 10"/>
-                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
+            {theme === 'light' ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
               </svg>
-              Start Over
-            </button>
-            <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}>
-              {theme === 'light' ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="5"/>
-                  <line x1="12" y1="1" x2="12" y2="3"/>
-                  <line x1="12" y1="21" x2="12" y2="23"/>
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                  <line x1="1" y1="12" x2="3" y2="12"/>
-                  <line x1="21" y1="12" x2="23" y2="12"/>
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                </svg>
-              )}
-            </button>
-          </div>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            )}
+          </button>
         </div>
         <p>TradFi + Crypto Tax Calculator</p>
         {saveIndicator && <span className="save-indicator">✓ Saved</span>}
@@ -717,6 +743,53 @@ This is an estimate only. Consult a tax professional.
           <section className="form-section">
             <div className="form-card">
               <h2>W-2 Income</h2>
+              
+              {w2Upload.status === 'idle' && (
+                <div className="upload-zone compact">
+                  <input
+                    type="file"
+                    id="w2-upload"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={handleW2Upload}
+                    className="file-input"
+                  />
+                  <label htmlFor="w2-upload" className="upload-label compact">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <span>Upload W-2 PDF</span>
+                  </label>
+                </div>
+              )}
+
+              {w2Upload.status === 'uploading' && (
+                <div className="upload-progress compact">
+                  <div className="progress-info">
+                    <span>Processing {w2Upload.file?.name}</span>
+                    <span>{Math.round(w2Upload.progress)}%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${w2Upload.progress}%` }}></div>
+                  </div>
+                </div>
+              )}
+
+              {w2Upload.status === 'done' && (
+                <div className="upload-success compact">
+                  <div className="success-header">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                      <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <span>W-2 extracted</span>
+                    <button className="clear-btn" onClick={clearW2Upload}>×</button>
+                  </div>
+                  <p className="file-name">{w2Upload.file?.name}</p>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Wages (Box 1)</label>
                 <input
@@ -768,70 +841,55 @@ This is an estimate only. Consult a tax professional.
               </div>
             </div>
 
-            <div className="form-card upload-card">
-              <h2>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="12" y1="18" x2="12" y2="12"/>
-                  <line x1="9" y1="15" x2="12" y2="12"/>
-                  <line x1="15" y1="15" x2="12" y2="12"/>
-                </svg>
-                Upload W-2 / 1099 PDF
-              </h2>
-              
-              {docUpload.status === 'idle' && (
-                <div className="upload-zone">
+            <div className="form-card">
+              <h2>1099-NEC / 1099-MISC</h2>
+
+              {form1099Upload.status === 'idle' && (
+                <div className="upload-zone compact">
                   <input
                     type="file"
-                    id="doc-upload"
+                    id="form1099-upload"
                     accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={handleDocUpload}
+                    onChange={handle1099Upload}
                     className="file-input"
                   />
-                  <label htmlFor="doc-upload" className="upload-label">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <label htmlFor="form1099-upload" className="upload-label compact">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="17 8 12 3 7 8"/>
                       <line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
-                    <span>Drag & drop or click to upload</span>
-                    <span className="upload-hint">PDF, PNG, JPG up to 10MB</span>
+                    <span>Upload 1099 PDF</span>
                   </label>
                 </div>
               )}
 
-              {docUpload.status === 'uploading' && (
-                <div className="upload-progress">
+              {form1099Upload.status === 'uploading' && (
+                <div className="upload-progress compact">
                   <div className="progress-info">
-                    <span>Processing {docUpload.file?.name}</span>
-                    <span>{Math.round(docUpload.progress)}%</span>
+                    <span>Processing {form1099Upload.file?.name}</span>
+                    <span>{Math.round(form1099Upload.progress)}%</span>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${docUpload.progress}%` }}></div>
+                    <div className="progress-fill" style={{ width: `${form1099Upload.progress}%` }}></div>
                   </div>
-                  <p className="progress-status">Extracting data from document...</p>
                 </div>
               )}
 
-              {docUpload.status === 'done' && (
-                <div className="upload-success">
+              {form1099Upload.status === 'done' && (
+                <div className="upload-success compact">
                   <div className="success-header">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                       <polyline points="22 4 12 14.01 9 11.01"/>
                     </svg>
-                    <span>Successfully processed</span>
-                    <button className="clear-btn" onClick={clearDocUpload}>×</button>
+                    <span>1099 extracted</span>
+                    <button className="clear-btn" onClick={clearForm1099Upload}>×</button>
                   </div>
-                  <p className="file-name">{docUpload.file?.name}</p>
-                  <p className="success-detail">W-2 and 1099 data extracted and populated</p>
+                  <p className="file-name">{form1099Upload.file?.name}</p>
                 </div>
               )}
-            </div>
 
-            <div className="form-card">
-              <h2>1099-NEC / 1099-MISC</h2>
               <div className="form-group">
                 <label>Self-Employment Income</label>
                 <input

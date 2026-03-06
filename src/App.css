@@ -24,20 +24,13 @@ header {
 
 .header-top {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   position: relative;
 }
 
 .header-top h1 {
   margin: 0;
-}
-
-.header-actions {
-  position: absolute;
-  right: 0;
-  display: flex;
-  gap: 0.5rem;
 }
 
 .reset-btn {
@@ -53,6 +46,11 @@ header {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  margin-right: auto;
+}
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .reset-btn:hover {
@@ -61,8 +59,6 @@ header {
 }
 
 .theme-toggle {
-  position: absolute;
-  right: 0;
   background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -74,6 +70,7 @@ header {
   justify-content: center;
   transition: all 0.2s;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-left: auto;
 }
 
 .theme-toggle:hover {
@@ -1262,11 +1259,6 @@ body.dark .theme-toggle {
 body.dark .theme-toggle:hover {
   background: #30363d;
   border-color: #484f58;
-}
-
-body.dark .header-actions {
-  position: absolute;
-  right: 1rem;
 }
 
 body.dark .reset-btn {
