@@ -16,7 +16,7 @@ app.use(express.json());
 const upload = multer({ dest: 'uploads/' });
 
 // Initialize OpenAI conditionally using OpenRouter (to mock standard OpenAI format)
-const apiKey = process.env.OPENAI_API_KEY || "YOUR_API_KEY_HERE";
+const apiKey = process.env.OPENAI_API_KEY || "API_KEY_PLACEHOLDER";
 const openai = new OpenAI({
   apiKey: apiKey,
   baseURL: "https://openrouter.ai/api/v1", // Route to OpenRouter for ease of testing right now
