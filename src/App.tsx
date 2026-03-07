@@ -592,7 +592,7 @@ This is an estimate only. Consult a tax professional.
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer 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'
+          'Authorization': 'Bearer YOUR_API_KEY_HERE'
         },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
