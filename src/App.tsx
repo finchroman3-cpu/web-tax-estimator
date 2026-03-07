@@ -8,6 +8,7 @@ interface W2Data {
   socialSecurity: number
   medicare: number
   overtimePay: number
+  tips: number
 }
 
 interface Form1099Data {
@@ -319,7 +320,8 @@ function App() {
       stateTax: 0,
       socialSecurity: 0,
       medicare: 0,
-      overtimePay: 0
+      overtimePay: 0,
+      tips: 0
     })
     setForm1099({ income: 0, expenses: 0 })
     setCryptoTxs([])
@@ -344,7 +346,8 @@ function App() {
       stateTax: 0,
       socialSecurity: 0,
       medicare: 0,
-      overtimePay: 0
+      overtimePay: 0,
+      tips: 0
     }
   })
 
@@ -531,7 +534,8 @@ This is an estimate only. Consult a tax professional.
         stateTax: data.stateTax || 0,
         socialSecurity: data.socialSecurity || 0,
         medicare: data.medicare || 0,
-        overtimePay: data.overtimePay || 0
+        overtimePay: data.overtimePay || 0,
+        tips: data.tips || 0
       })
 
       setW2Upload({ file, progress: 100, status: 'done' })
@@ -702,7 +706,8 @@ This is an estimate only. Consult a tax professional.
   const calculations = useMemo(() => {
     const standardDeduction = 13850; // TCJA single filer standard deduction for 2023
     const deductibleOvertime = Math.min(w2Data.overtimePay, 12500); // New law cap for single filers
-    const taxableW2Federal = Math.max(0, w2Data.wages - deductibleOvertime - standardDeduction)
+    const deductibleTips = Math.min(w2Data.tips, 25000); // New law cap for tips
+    const taxableW2Federal = Math.max(0, w2Data.wages - deductibleOvertime - deductibleTips - standardDeduction)
     const taxableW2 = w2Data.wages
     const net1099 = Math.max(0, form1099.income - form1099.expenses)
     const net1099Taxable = net1099 * 0.9235
@@ -743,7 +748,8 @@ This is an estimate only. Consult a tax professional.
       shortTermGains: totalShortTermGain,
       longTermGains: totalLongTermGain,
       netCrypto,
-      overtimePay: deductibleOvertime
+      overtimePay: deductibleOvertime,
+      tips: deductibleTips
     }
   }, [w2Data, form1099, cryptoTaxData, selectedState, stateTaxInfo])
 
@@ -886,6 +892,16 @@ This is an estimate only. Consult a tax professional.
                   placeholder="0.00"
                 />
                 <p className="helper">Deductible up to $12,500 under federal law</p>
+              </div>
+              <div className="form-group">
+                <label>Tips (Federal Tax-Free)</label>
+                <input
+                  type="number"
+                  value={w2Data.tips || ''}
+                  onChange={(e) => setW2Data({...w2Data, tips: Number(e.target.value)})}
+                  placeholder="0.00"
+                />
+                <p className="helper">Deductible up to $25,000 under federal law</p>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -1255,6 +1271,12 @@ This is an estimate only. Consult a tax professional.
             <div className="summary-row overtime">
               <span>Tax-Free Overtime</span>
               <span>-${calculations.overtimePay.toLocaleString()}</span>
+            </div>
+          )}
+          {calculations.tips > 0 && (
+            <div className="summary-row overtime">
+              <span>Tax-Free Tips</span>
+              <span>-${calculations.tips.toLocaleString()}</span>
             </div>
           )}
           <div className="summary-row">
