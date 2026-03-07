@@ -400,6 +400,13 @@ function App() {
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [walletError, setWalletError] = useState('')
 
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
+    { role: 'assistant', content: 'Hi! I\'m your Tax AI Assistant. Ask me about US taxes for W-2 income, 1099 freelance work, or crypto transactions.' }
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+
   const [w2Upload, setW2Upload] = useState<{ file: File | null; progress: number; status: 'idle' | 'uploading' | 'done' | 'error' }>({
     file: null,
     progress: 0,
@@ -502,26 +509,36 @@ This is an estimate only. Consult a tax professional.
 
     setW2Upload({ file, progress: 0, status: 'uploading' })
 
-    const interval = setInterval(() => {
-      setW2Upload(prev => {
-        if (prev.progress >= 100) {
-          clearInterval(interval)
-          return { ...prev, progress: 100, status: 'done' }
-        }
-        return { ...prev, progress: prev.progress + Math.random() * 20 }
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('docType', 'w2')
+
+      const response = await fetch('http://localhost:3001/api/extract-tax-doc', {
+        method: 'POST',
+        body: formData
       })
-    }, 200)
 
-    await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-    setW2Data({
-      wages: 125000,
-      federalTax: 22000,
-      stateTax: 8500,
-      socialSecurity: 7750,
-      medicare: 1813,
-      overtimePay: 2500
-    })
+      const data = await response.json()
+
+      setW2Data({
+        wages: data.wages || 0,
+        federalTax: data.federalTax || 0,
+        stateTax: data.stateTax || 0,
+        socialSecurity: data.socialSecurity || 0,
+        medicare: data.medicare || 0,
+        overtimePay: data.overtimePay || 0
+      })
+
+      setW2Upload({ file, progress: 100, status: 'done' })
+    } catch (error) {
+      console.error('W2 upload failed:', error)
+      setW2Upload({ file, progress: 0, status: 'error' })
+    }
   }
 
   const handle1099Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -530,22 +547,73 @@ This is an estimate only. Consult a tax professional.
 
     setForm1099Upload({ file, progress: 0, status: 'uploading' })
 
-    const interval = setInterval(() => {
-      setForm1099Upload(prev => {
-        if (prev.progress >= 100) {
-          clearInterval(interval)
-          return { ...prev, progress: 100, status: 'done' }
-        }
-        return { ...prev, progress: prev.progress + Math.random() * 20 }
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('docType', '1099')
+
+      const response = await fetch('http://localhost:3001/api/extract-tax-doc', {
+        method: 'POST',
+        body: formData
       })
-    }, 200)
 
-    await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-    setForm1099({
-      income: 35000,
-      expenses: 8500
-    })
+      const data = await response.json()
+
+      setForm1099({
+        income: data.income || 0,
+        expenses: data.expenses || 0
+      })
+
+      setForm1099Upload({ file, progress: 100, status: 'done' })
+    } catch (error) {
+      console.error('1099 upload failed:', error)
+      setForm1099Upload({ file, progress: 0, status: 'error' })
+    }
+  }
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim() || chatLoading) return
+
+    const userMessage = chatInput.trim()
+    setChatInput('')
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setChatLoading(true)
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer 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'
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: 'You are a helpful US Tax Assistant specializing in TradFi (W-2, 1099) and Crypto taxation. Keep responses brief, accurate, and focused on US federal tax rules. Do not provide specific tax advice, but general guidance is fine.' },
+            ...chatMessages,
+            { role: 'user', content: userMessage }
+          ]
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const assistantMessage = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.'
+
+      setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }])
+    } catch (error) {
+      console.error('Chat failed:', error)
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }])
+    } finally {
+      setChatLoading(false)
+    }
   }
 
   const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -632,7 +700,9 @@ This is an estimate only. Consult a tax professional.
   }, [cryptoTxs])
   
   const calculations = useMemo(() => {
-    const taxableW2Federal = Math.max(0, w2Data.wages - w2Data.overtimePay)
+    const standardDeduction = 13850; // TCJA single filer standard deduction for 2023
+    const deductibleOvertime = Math.min(w2Data.overtimePay, 12500); // New law cap for single filers
+    const taxableW2Federal = Math.max(0, w2Data.wages - deductibleOvertime - standardDeduction)
     const taxableW2 = w2Data.wages
     const net1099 = Math.max(0, form1099.income - form1099.expenses)
     const net1099Taxable = net1099 * 0.9235
@@ -673,7 +743,7 @@ This is an estimate only. Consult a tax professional.
       shortTermGains: totalShortTermGain,
       longTermGains: totalLongTermGain,
       netCrypto,
-      overtimePay: w2Data.overtimePay
+      overtimePay: deductibleOvertime
     }
   }, [w2Data, form1099, cryptoTaxData, selectedState, stateTaxInfo])
 
@@ -815,7 +885,7 @@ This is an estimate only. Consult a tax professional.
                   onChange={(e) => setW2Data({...w2Data, overtimePay: Number(e.target.value)})}
                   placeholder="0.00"
                 />
-                <p className="helper">Exempt from federal tax under certain conditions</p>
+                <p className="helper">Deductible up to $12,500 under federal law</p>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -1436,6 +1506,47 @@ This is an estimate only. Consult a tax professional.
           </div>
         </div>
       )}
+
+      <div className={`chat-widget ${chatOpen ? 'open' : ''}`}>
+        {chatOpen && (
+          <div className="chat-window">
+            <div className="chat-header">
+              <span>Ask Tax AI</span>
+              <button className="chat-close" onClick={() => setChatOpen(false)}>×</button>
+            </div>
+            <div className="chat-messages">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`chat-message ${msg.role}`}>
+                  {msg.content}
+                </div>
+              ))}
+              {chatLoading && <div className="chat-message assistant">Thinking...</div>}
+            </div>
+            <div className="chat-input-wrap">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendChat()}
+                placeholder="Ask about taxes..."
+                disabled={chatLoading}
+              />
+              <button onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>Send</button>
+            </div>
+          </div>
+        )}
+        <button className="chat-toggle" onClick={() => setChatOpen(!chatOpen)}>
+          {chatOpen ? (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          )}
+        </button>
+      </div>
     </div>
   )
 }
