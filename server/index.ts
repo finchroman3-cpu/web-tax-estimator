@@ -13,15 +13,8 @@ app.use(express.json());
 
 const upload = multer({ dest: 'uploads/' });
 
-// Initialize OpenAI conditionally using OpenRouter (to mock standard OpenAI format)
-const apiKey = process.env.OPENAI_API_KEY || "API_KEY_PLACEHOLDER";
 const openai = new OpenAI({
-  apiKey: apiKey,
-  baseURL: "https://openrouter.ai/api/v1", // Route to OpenRouter for ease of testing right now
-  defaultHeaders: {
-    "HTTP-Referer": "http://localhost:5173",
-    "X-Title": "Tax Estimator App",
-  }
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 app.post('/api/extract-tax-doc', upload.single('document'), async (req, res) => {
@@ -61,7 +54,7 @@ app.post('/api/extract-tax-doc', upload.single('document'), async (req, res) => 
     console.log(`Sending ${docType} to Vision LLM...`);
 
     const response = await openai.chat.completions.create({
-      model: "google/gemini-2.5-flash", // Fast, highly capable cheap vision model
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
