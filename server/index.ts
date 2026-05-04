@@ -2,10 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { OpenAI } from 'openai';
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import fs from 'fs';
-
-dotenv.config();
 
 const app = express();
 const port = 3001;
@@ -72,7 +70,7 @@ app.post('/api/extract-tax-doc', upload.single('document'), async (req, res) => 
             {
               type: "image_url",
               image_url: {
-                url: \`data:\${mimeType};base64,\${base64Image}\`
+                url: `data:${mimeType};base64,${base64Image}`
               }
             }
           ]
@@ -99,5 +97,5 @@ app.post('/api/extract-tax-doc', upload.single('document'), async (req, res) => 
 });
 
 app.listen(port, () => {
-  console.log(\`Tax Document API Server running at http://localhost:\${port}\`);
+  console.log(`Tax Document API Server running at http://localhost:${port}`);
 });
