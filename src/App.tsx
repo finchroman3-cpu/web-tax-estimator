@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import './App.css'
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
 interface W2Data {
   wages: number
   federalTax: number
@@ -307,10 +309,13 @@ function App() {
     setW2Upload({ file, progress: 0, status: 'uploading' })
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('document', file)
       formData.append('docType', 'w2')
-      const response = await fetch('http://localhost:3001/api/extract-tax-doc', { method: 'POST', body: formData })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const response = await fetch(`${API_BASE_URL}/api/extract-tax-doc`, { method: 'POST', body: formData })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || `HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
       setW2Data({
         wages: data.wages || 0,
@@ -334,10 +339,13 @@ function App() {
     setForm1099Upload({ file, progress: 0, status: 'uploading' })
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('document', file)
       formData.append('docType', '1099')
-      const response = await fetch('http://localhost:3001/api/extract-tax-doc', { method: 'POST', body: formData })
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const response = await fetch(`${API_BASE_URL}/api/extract-tax-doc`, { method: 'POST', body: formData })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || `HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
       setForm1099({ income: data.income || 0, expenses: data.expenses || 0 })
       setForm1099Upload({ file, progress: 100, status: 'done' })
