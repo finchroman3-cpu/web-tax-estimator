@@ -1,6 +1,4 @@
 import fs from 'fs/promises'
-import formidable from 'formidable'
-import { OpenAI } from 'openai'
 
 export const config = {
   api: {
@@ -8,13 +6,10 @@ export const config = {
   },
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
-function parseForm(req: any) {
-  const form = formidable({ multiples: false, keepExtensions: true })
-  return new Promise<{ fields: formidable.Fields; files: formidable.Files }>((resolve, reject) => {
+async function parseForm(req: any) {
+  const { IncomingForm } = await import('formidable')
+  const form = new IncomingForm({ multiples: false, keepExtensions: true })
+  return new Promise<any>((resolve, reject) => {
     form.parse(req, (err, fields, files) => {
       if (err) reject(err)
       else resolve({ fields, files })
@@ -50,18 +45,28 @@ function buildPrompt(docType: string) {
 }
 
 export default async function handler(req: any, res: any) {
+  if (req.method === 'GET') {
+    res.status(200).json({ ok: true, route: 'extract-tax-doc' })
+    return
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
     return
   }
 
-  let uploadedFile: formidable.File | undefined
+  let uploadedFile: any
 
   try {
     if (!process.env.OPENAI_API_KEY) {
       res.status(500).json({ error: 'Missing OPENAI_API_KEY on the server' })
       return
     }
+
+    const { OpenAI } = await import('openai')
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
 
     const { fields, files } = await parseForm(req)
     const candidate = files.document ?? files.file
